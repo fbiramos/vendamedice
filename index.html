@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VéndameDice - Inventario Familiar</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #message-box {
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .hidden {
+            display: none;
+        }
+        #role-selector-modal {
+            transition: opacity 0.3s;
+        }
+        .img-circle {
+            border-radius: 50%;
+            object-fit: cover; /* Para que la imagen no se deforme */
+        }
+        #product-detail-modal {
+            transition: opacity 0.3s;
+        }
+        body:not(.is-jefe) .boss-only {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans">
+
+    <!-- Modal de Selección de Rol -->
+    <div id="role-selector-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl text-center max-w-sm mx-auto">
+            <img src="icons/icon-192x192.png" alt="Icono de la app" class="w-32 h-32 mx-auto mb-4 rounded-lg">
+            <h2 class="text-3xl font-bold mb-2 text-indigo-500">Bienvenido a VéndameDice</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-8">Por favor, elige cómo quieres entrar.</p>
+            <div class="space-y-4">
+                <button id="enter-as-user-btn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors text-lg">Ver Inventario</button>
+                <button id="enter-as-boss-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors text-lg">Administrar (Jefe)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Imagen Agrandada -->
+    <div id="image-zoom-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+        <span id="close-zoom-modal-btn" class="absolute top-4 right-6 text-white text-5xl font-bold cursor-pointer">&times;</span>
+        <img id="zoomed-image" src="" alt="Imagen Agrandada" class="max-w-full max-h-full rounded-lg">
+    </div>
+
+    <!-- Modal de Detalle de Producto -->
+    <div id="product-detail-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl max-w-lg w-full m-4 relative" data-product-id="">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-3xl font-bold">&times;</button>
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="md:w-1/2 relative group">
+                    <img id="modal-product-image" src="" alt="Imagen del Producto" class="w-full h-64 rounded-lg object-contain">
+                    <button id="edit-image-btn" class="absolute top-2 right-2 bg-indigo-500 p-2 rounded-full text-white boss-only hover:bg-indigo-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="md:w-1/2 flex flex-col justify-center space-y-3">
+                    <!-- Campo Nombre -->
+                    <div data-field="name">
+                        <div class="view-mode flex items-center gap-2">
+                            <h2 id="modal-product-name" class="text-3xl font-bold"></h2>
+                                                        <button class="edit-btn boss-only p-1 hover:bg-gray-700 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="edit-mode hidden">
+                            <input type="text" id="edit-product-name" class="w-full p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                            <button class="save-btn bg-green-500 text-white px-3 py-1 rounded-lg mt-1">Guardar</button>
+                            <button class="cancel-btn bg-red-500 text-white px-3 py-1 rounded-lg mt-1">Cancelar</button>
+                        </div>
+                    </div>
+                    <!-- Campo Precio -->
+                    <div data-field="price">
+                        <div class="view-mode flex items-center gap-2">
+                            <p id="modal-product-price" class="text-5xl font-light text-indigo-400"></p>
+                                                        <button class="edit-btn boss-only p-1 hover:bg-gray-700 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="edit-mode hidden">
+                            <input type="number" step="0.01" id="edit-product-price" class="w-full p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                            <button class="save-btn bg-green-500 text-white px-3 py-1 rounded-lg mt-1">Guardar</button>
+                            <button class="cancel-btn bg-red-500 text-white px-3 py-1 rounded-lg mt-1">Cancelar</button>
+                        </div>
+                    </div>
+                    <!-- Campo Categoría -->
+                    <div data-field="category">
+                        <div class="view-mode flex items-center gap-2">
+                             <p id="modal-product-category" class="text-gray-500 dark:text-gray-400"></p>
+                                                         <button class="edit-btn boss-only p-1 hover:bg-gray-700 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="edit-mode hidden">
+                            <select id="edit-product-category" class="w-full p-2 bg-gray-200 dark:bg-gray-700 rounded-lg">
+                                <option value="">-- Sin Categoría --</option>
+                                <option value="PANES Y MASAS">PANES Y MASAS</option>
+                                <option value="AGUAS Y GASEOSAS">AGUAS Y GASEOSAS</option>
+                                <option value="JUGOS Y LÁCTEOS">JUGOS Y LÁCTEOS</option>
+                                <option value="PAPEL HIGIENICO Y SIMILARES">PAPEL HIGIENICO Y SIMILARES</option>
+                                <option value="DULCES GALLETAS Y SALADOS">DULCES GALLETAS Y SALADOS</option>
+                                <option value="TRAGOS Y CIGARROS">TRAGOS Y CIGARROS</option>
+                                <option value="COCINA Y DESAYUNO">COCINA Y DESAYUNO</option>
+                                <option value="ASEO Y FARMACIA">ASEO Y FARMACIA</option>
+                                <option value="VARIOS">VARIOS</option>
+                            </select>
+                            <button class="save-btn bg-green-500 text-white px-3 py-1 rounded-lg mt-1">Guardar</button>
+                            <button class="cancel-btn bg-red-500 text-white px-3 py-1 rounded-lg mt-1">Cancelar</button>
+                        </div>
+                    </div>
+                    <!-- Campo Detalles -->
+                    <div data-field="details">
+                        <div class="view-mode flex items-center gap-2">
+                            <p id="modal-product-details" class="text-gray-600 dark:text-gray-400 text-xl"></p>
+                                                        <button class="edit-btn boss-only p-1 hover:bg-gray-700 rounded-full">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="edit-mode hidden">
+                            <textarea id="edit-product-details" rows="3" class="w-full p-2 bg-gray-200 dark:bg-gray-700 rounded-lg"></textarea>
+                            <button class="save-btn bg-green-500 text-white px-3 py-1 rounded-lg mt-1">Guardar</button>
+                            <button class="cancel-btn bg-red-500 text-white px-3 py-1 rounded-lg mt-1">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cámara Genérico -->
+    <div id="camera-modal" class="fixed inset-0 bg-black flex-col items-center justify-center z-[999] hidden">
+        <video id="camera-video" class="w-full h-full object-contain" autoplay></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+        <button id="camera-capture-btn" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-teal-500 text-white font-bold p-4 rounded-full hover:bg-teal-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+        </button>
+        <button id="camera-switch-btn" class="absolute top-4 right-20 text-white p-2 rounded-full bg-gray-800 bg-opacity-50 hover:bg-opacity-75">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.667 0l3.182-3.182m0-11.667a8.25 8.25 0 00-11.667 0L2.985 7.985" />
+            </svg>
+        </button>
+        <span id="camera-close-btn" class="absolute top-4 right-6 text-white text-4xl font-bold cursor-pointer hover:text-gray-300">&times;</span>
+    </div>
+
+
+    <!-- Contenedor Principal -->
+    <div id="main-content" class="container mx-auto p-4 hidden">
+
+        <!-- Encabezado -->
+        <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-300 dark:border-gray-700">
+            <div class="flex items-center gap-4">
+                <h1 class="text-4xl font-bold text-indigo-500">VéndameDice</h1>
+            </div>
+            <div>
+                <span id="role-display" class="font-semibold mr-4"></span>
+                <button id="change-role-btn" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors">Cambiar de Rol</button>
+            </div>
+        </header>
+
+        <!-- Caja de Mensajes para Notificaciones -->
+        <div id="message-box" class="fixed top-5 right-5 p-4 rounded-lg text-white opacity-0 transform translate-y-[-20px] shadow-lg z-50"></div>
+
+        <!-- Sección del Jefe (gestión de productos) -->
+        <section id="boss-section" class="hidden mb-8 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+            <h2 class="text-2xl font-bold mb-4">Añadir Nuevo Producto</h2>
+            <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="md:col-span-2">
+                    <label for="product-name" class="block mb-2 font-semibold">Nombre del Producto</label>
+                    <input type="text" id="product-name" required class="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="product-price" class="block mb-2 font-semibold">Precio</label>
+                    <input type="number" id="product-price" step="0.01" required class="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="product-category" class="block mb-2 font-semibold">Categoría</label>
+                    <select id="product-category" class="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">-- Sin Categoría --</option>
+                        <option value="PANES Y MASAS">PANES Y MASAS</option>
+                        <option value="AGUAS Y GASEOSAS">AGUAS Y GASEOSAS</option>
+                        <option value="JUGOS Y LÁCTEOS">JUGOS Y LÁCTEOS</option>
+                        <option value="PAPEL HIGIENICO Y SIMILARES">PAPEL HIGIENICO Y SIMILARES</option>
+                        <option value="DULCES GALLETAS Y SALADOS">DULCES GALLETAS Y SALADOS</option>
+                        <option value="TRAGOS Y CIGARROS">TRAGOS Y CIGARROS</option>
+                        <option value="COCINA Y DESAYUNO">COCINA Y DESAYUNO</option>
+                        <option value="ASEO Y FARMACIA">ASEO Y FARMACIA</option>
+                        <option value="VARIOS">VARIOS</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="product-details" class="block mb-2 font-semibold">Detalles (opcional)</label>
+                    <textarea id="product-details" rows="3" class="w-full p-3 bg-gray-200 dark:bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block mb-2 font-semibold">Imagen del Producto</label>
+                    <div class="flex items-center gap-4">
+                        <button type="button" id="start-camera-btn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Añadir Foto</button>
+                        <img id="photo-preview" class="hidden w-32 h-32 object-cover mt-4 rounded-lg border-2 border-indigo-500">
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <button type="submit" id="save-product-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors">Guardar Producto</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Sección de Lista de Productos -->
+        <section id="product-list-section">
+            <h2 class="text-2xl font-bold mb-4">Inventario de Productos</h2>
+            <!-- Filtros -->
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <input type="text" id="search-input" placeholder="Buscar por nombre..." class="w-full p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <select id="category-filter" class="w-full md:w-64 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="all">Todas las categorías</option>
+                    <option value="PANES Y MASAS">PANES Y MASAS</option>
+                    <option value="AGUAS Y GASEOSAS">AGUAS Y GASEOSAS</option>
+                    <option value="JUGOS Y LÁCTEOS">JUGOS Y LÁCTEOS</option>
+                    <option value="PAPEL HIGIENICO Y SIMILARES">PAPEL HIGIENICO Y SIMILARES</option>
+                    <option value="DULCES GALLETAS Y SALADOS">DULCES GALLETAS Y SALADOS</option>
+                    <option value="TRAGOS Y CIGARROS">TRAGOS Y CIGARROS</option>
+                    <option value="COCINA Y DESAYUNO">COCINA Y DESAYUNO</option>
+                    <option value="ASEO Y FARMACIA">ASEO Y FARMACIA</option>
+                    <option value="VARIOS">VARIOS</option>
+                     <option value="">Sin Categoría</option>
+                </select>
+            </div>
+            <!-- Contenedor de la lista -->
+            <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <!-- Los productos se insertarán aquí dinámicamente -->
+            </div>
+        </section>
+    </div>
+
+    <script type="module">
+        // =================================================================================
+        // CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE
+        // =================================================================================
+        
+        const __firebase_config = {
+          apiKey: "AIzaSyDRLLiUxh7KEwjTPl8L5Vp9YUhirYG1eQ0",
+          authDomain: "vendamedice-inventario.firebaseapp.com",
+          projectId: "vendamedice-inventario",
+          storageBucket: "vendamedice-inventario.appspot.com",
+          messagingSenderId: "591425300174",
+          appId: "1:591425300174:web:03e290196da1d2737f129f"
+        };
+        const __app_id = "vendamedice-app";
+
+        // Importar solo las funciones de Firestore
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot,
+            deleteDoc,
+            doc,
+            updateDoc,
+            query,
+            orderBy,
+            enableIndexedDbPersistence
+        } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+        // Inicializar Firebase
+        const app = initializeApp(__firebase_config);
+        const db = getFirestore(app);
+
+        // Habilitar persistencia offline
+        try {
+            enableIndexedDbPersistence(db)
+                .then(() => console.log("Persistencia offline habilitada."))
+                .catch((err) => {
+                    if (err.code == 'failed-precondition') {
+                        console.log("La persistencia falló, probablemente por múltiples pestañas abiertas.");
+                    } else if (err.code == 'unimplemented') {
+                        console.log("El navegador actual no soporta la persistencia.");
+                    }
+                });
+        } catch (e) {
+            console.error("Error al habilitar la persistencia offline", e);
+        }
+
+        // =================================================================================
+        // REFERENCIAS A ELEMENTOS DEL DOM
+        // =================================================================================
+        const messageBox = document.getElementById('message-box');
+        const roleSelectorModal = document.getElementById('role-selector-modal');
+        const mainContent = document.getElementById('main-content');
+        const enterAsUserBtn = document.getElementById('enter-as-user-btn');
+        const enterAsBossBtn = document.getElementById('enter-as-boss-btn');
+        const changeRoleBtn = document.getElementById('change-role-btn');
+        const roleDisplay = document.getElementById('role-display');
+        const bossSection = document.getElementById('boss-section');
+        const addProductForm = document.getElementById('add-product-form');
+        const productListDiv = document.getElementById('product-list');
+        const searchInput = document.getElementById('search-input');
+        const categoryFilter = document.getElementById('category-filter');
+        const saveProductBtn = document.getElementById('save-product-btn');
+        
+        // Referencias para el modal de detalle
+        const productDetailModal = document.getElementById('product-detail-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalProductImage = document.getElementById('modal-product-image');
+        const modalProductName = document.getElementById('modal-product-name');
+        const modalProductPrice = document.getElementById('modal-product-price');
+        const modalProductCategory = document.getElementById('modal-product-category');
+        const modalProductDetails = document.getElementById('modal-product-details');
+
+        // Referencias para el modal de cámara
+        const cameraModal = document.getElementById('camera-modal');
+        const cameraVideo = document.getElementById('camera-video');
+        const cameraCanvas = document.getElementById('camera-canvas');
+        const cameraCaptureBtn = document.getElementById('camera-capture-btn');
+        const cameraSwitchBtn = document.getElementById('camera-switch-btn');
+        const cameraCloseBtn = document.getElementById('camera-close-btn');
+        const photoPreview = document.getElementById('photo-preview');
+        const startCameraBtn = document.getElementById('start-camera-btn');
+
+
+        // =================================================================================
+        // ESTADO DE LA APLICACIÓN Y CONFIGURACIÓN
+        // =================================================================================
+        
+        const JEFE_PASSWORD = 'juanita'; 
+
+        let currentUserRole = null; // Puede ser 'usuario' o 'jefe'
+        let allProducts = [];
+        let unsubscribeProducts = null;
+        let cameraStream = null;
+        let currentFacingMode = 'environment'; // 'environment' para trasera, 'user' para frontal
+        let onCaptureCallback = null;
+
+        // =================================================================================
+        // LÓGICA DE NAVEGACIÓN Y BOTÓN DE RETROCESO
+        // =================================================================================
+
+        // El estado inicial de la aplicación no tiene rol.
+        history.replaceState({ role: null }, 'Selección de Rol', '#');
+
+        function handleStateChange(event) {
+            const state = event.state || { role: null };
+
+            // Sincronizar el estado de la aplicación con el estado del historial
+            document.body.classList.toggle('is-jefe', state.role === 'jefe');
+            currentUserRole = state.role;
+            updateUI();
+
+            // Manejar la visibilidad del modal de detalle
+            if (state.modalOpen) {
+                const product = allProducts.find(p => p.id === state.productId);
+                if (product) {
+                    productDetailModal.dataset.productId = state.productId;
+                    const placeholderImg = 'https://via.placeholder.com/300x200/4a5568/ffffff?text=Sin+Imagen';
+                    modalProductImage.src = product.image || placeholderImg;
+                    modalProductName.textContent = product.name;
+                    modalProductPrice.textContent = `${(product.price || 0).toFixed(2)} Bs.`;
+                    modalProductCategory.textContent = product.category || 'Sin categoría';
+                    modalProductDetails.textContent = product.details || 'No hay detalles adicionales.';
+                    productDetailModal.classList.remove('hidden');
+                } else if (state.productId) {
+                    // Si el producto no está en la lista (aún cargando), esperamos a que onSnapshot lo actualice
+                } else {
+                    productDetailModal.classList.add('hidden');
+                }
+            } else {
+                productDetailModal.classList.add('hidden');
+            }
+        }
+
+        window.addEventListener('popstate', handleStateChange);
+
+        enterAsUserBtn.addEventListener('click', () => {
+            history.pushState({ role: 'usuario' }, 'Rol: Usuario', '#usuario');
+            handleStateChange({ state: { role: 'usuario' } });
+        });
+
+        enterAsBossBtn.addEventListener('click', () => {
+            const password = prompt('Por favor, ingresa la contraseña de Jefe:');
+            if (password === JEFE_PASSWORD) {
+                history.pushState({ role: 'jefe' }, 'Rol: Jefe', '#jefe');
+                handleStateChange({ state: { role: 'jefe' } });
+            } else if (password !== null) {
+                showMessage('Contraseña incorrecta.', true);
+            }
+        });
+
+        changeRoleBtn.addEventListener('click', () => {
+            history.back();
+        });
+
+        function openProductModal(productId) {
+            const product = allProducts.find(p => p.id === productId);
+            if (!product) return;
+
+            history.pushState({ ...history.state, modalOpen: true, productId: productId }, 'Detalle de Producto', `#producto/${productId}`);
+            handleStateChange({ state: { ...history.state, modalOpen: true, productId: productId } });
+        }
+
+        function closeProductModal() {
+            history.back();
+        }
+
+        closeModalBtn.addEventListener('click', closeProductModal);
+        productDetailModal.addEventListener('click', (e) => {
+            if (e.target === productDetailModal) {
+                closeProductModal();
+            }
+        });
+
+        // =================================================================================
+        // LÓGICA DE EDICIÓN DE PRODUCTOS
+        // =================================================================================
+
+        productDetailModal.addEventListener('click', (e) => {
+            const editButton = e.target.closest('.edit-btn');
+            if (editButton) {
+                const fieldContainer = editButton.closest('[data-field]');
+                const viewMode = fieldContainer.querySelector('.view-mode');
+                const editMode = fieldContainer.querySelector('.edit-mode');
+                const product = allProducts.find(p => p.id === productDetailModal.dataset.productId);
+                if (!product) return;
+
+                const field = fieldContainer.dataset.field;
+                const input = editMode.querySelector('input, textarea, select');
+
+                if (field === 'price') {
+                    input.value = product.price || 0;
+                } else if (field === 'category') {
+                    input.value = product.category || '';
+                } else {
+                    input.value = product[field] || '';
+                }
+
+                viewMode.classList.add('hidden');
+                editMode.classList.remove('hidden');
+            }
+
+            if (e.target.classList.contains('cancel-btn')) {
+                const fieldContainer = e.target.closest('[data-field]');
+                fieldContainer.querySelector('.view-mode').classList.remove('hidden');
+                fieldContainer.querySelector('.edit-mode').classList.add('hidden');
+            }
+
+            if (e.target.classList.contains('save-btn')) {
+                const fieldContainer = e.target.closest('[data-field]');
+                const field = fieldContainer.dataset.field;
+                const productId = productDetailModal.dataset.productId;
+                const input = fieldContainer.querySelector('input, textarea, select');
+                let newValue = input.value;
+
+                if (field === 'price') {
+                    newValue = parseFloat(newValue);
+                    if (isNaN(newValue)) {
+                        showMessage('El precio debe ser un número.', true);
+                        return;
+                    }
+                }
+
+                const saveButton = e.target;
+                saveButton.disabled = true;
+                saveButton.textContent = 'Guardando...';
+
+                updateProduct(productId, { [field]: newValue })
+                    .then(() => {
+                        showMessage('Producto actualizado.');
+                        fieldContainer.querySelector('.view-mode').classList.remove('hidden');
+                        fieldContainer.querySelector('.edit-mode').classList.add('hidden');
+                    })
+                    .catch(error => {
+                        showMessage(`Error al actualizar: ${error.message}`, true);
+                    })
+                    .finally(() => {
+                        saveButton.disabled = false;
+                        saveButton.textContent = 'Guardar';
+                    });
+            }
+        });
+        
+        document.getElementById('edit-image-btn').addEventListener('click', () => {
+            const productId = productDetailModal.dataset.productId;
+            openCamera(async (imageDataUrl) => {
+                showMessage('Actualizando imagen...');
+                await updateProduct(productId, { image: imageDataUrl });
+                modalProductImage.src = imageDataUrl;
+                showMessage('Imagen actualizada.');
+            });
+        });
+
+        async function updateProduct(productId, data) {
+            const productDocRef = doc(db, `artifacts/${__app_id}/public/data/products`, productId);
+            return updateDoc(productDocRef, data);
+        }
+
+        // =================================================================================
+        // FUNCIONES AUXILIARES DE UI
+        // =================================================================================
+
+        function showMessage(message, isError = false) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('bg-green-500', 'bg-red-500');
+            messageBox.classList.add(isError ? 'bg-red-500' : 'bg-green-500');
+            messageBox.classList.remove('opacity-0', 'translate-y-[-20px]');
+            messageBox.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                messageBox.classList.remove('opacity-100', 'translate-y-0');
+                messageBox.classList.add('opacity-0', 'translate-y-[-20px]');
+            }, 3000);
+        }
+
+        function updateUI() {
+            if (currentUserRole) {
+                roleSelectorModal.classList.add('opacity-0', 'pointer-events-none');
+                mainContent.classList.remove('hidden');
+                roleDisplay.textContent = `Rol: ${currentUserRole.charAt(0).toUpperCase() + currentUserRole.slice(1)}`;
+                bossSection.classList.toggle('hidden', currentUserRole !== 'jefe');
+                listenForProducts();
+            } else {
+                roleSelectorModal.classList.remove('opacity-0', 'pointer-events-none');
+                mainContent.classList.add('hidden');
+                if (unsubscribeProducts) {
+                    unsubscribeProducts();
+                    unsubscribeProducts = null;
+                }
+                allProducts = [];
+                renderProducts([]);
+                if (cameraStream) {
+                    closeCamera();
+                }
+            }
+            applyFilters();
+        }
+
+        // =================================================================================
+        // LÓGICA DE GESTIÓN DE PRODUCTOS (ROL 'JEFE')
+        // =================================================================================
+
+        addProductForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (currentUserRole !== 'jefe') {
+                showMessage('No tienes permiso para realizar esta acción.', true);
+                return;
+            }
+
+            saveProductBtn.disabled = true;
+            saveProductBtn.textContent = 'Guardando...';
+
+            const nameInput = document.getElementById('product-name');
+            const name = nameInput.value.trim();
+            const price = parseFloat(document.getElementById('product-price').value);
+            const category = document.getElementById('product-category').value;
+            const details = document.getElementById('product-details').value;
+            const image = photoPreview.src.startsWith('data:image') ? photoPreview.src : null;
+
+            if (!name || isNaN(price)) {
+                showMessage('El nombre y el precio son obligatorios.', true);
+                saveProductBtn.disabled = false;
+                saveProductBtn.textContent = 'Guardar Producto';
+                return;
+            }
+
+            const existingProduct = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if (existingProduct) {
+                showMessage(`El producto "${name}" ya existe. Por favor, elige un nombre diferente.`, true);
+                nameInput.focus();
+                saveProductBtn.disabled = false;
+                saveProductBtn.textContent = 'Guardar Producto';
+                return;
+            }
+
+            try {
+                const productsCollectionRef = collection(db, `artifacts/${__app_id}/public/data/products`);
+                await addDoc(productsCollectionRef, { name, price, category, details, image, createdAt: new Date() });
+                showMessage('Producto guardado exitosamente.');
+                addProductForm.reset();
+                photoPreview.classList.add('hidden');
+                photoPreview.src = '';
+            } catch (error) {
+                showMessage(`Error al guardar el producto: ${error.message}`, true);
+            } finally {
+                saveProductBtn.disabled = false;
+                saveProductBtn.textContent = 'Guardar Producto';
+            }
+        });
+
+        // =================================================================================
+        // LÓGICA DE LA CÁMARA (CENTRALIZADA)
+        // =================================================================================
+
+        async function openCamera(onCapture) {
+            if (cameraStream) {
+                closeCamera();
+                return;
+            }
+            onCaptureCallback = onCapture;
+
+            const constraints = { video: { facingMode: currentFacingMode } };
+
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraVideo.srcObject = cameraStream;
+                cameraModal.classList.remove('hidden');
+                // Ocultar el modal de detalles del producto si está abierto
+                if (!productDetailModal.classList.contains('hidden')) {
+                    productDetailModal.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error("Error al acceder a la cámara: ", error);
+                showMessage('No se pudo acceder a la cámara. Asegúrate de dar permiso.', true);
+                closeCamera();
+            }
+        }
+
+        function closeCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+            }
+            cameraStream = null;
+            cameraModal.classList.add('hidden');
+            // Volver a mostrar el modal de detalles si estaba abierto
+            if (productDetailModal.dataset.productId) {
+                 const product = allProducts.find(p => p.id === productDetailModal.dataset.productId);
+                 if(product) openProductModal(product.id);
+            }
+        }
+
+        cameraCaptureBtn.addEventListener('click', () => {
+            if (!cameraStream) return;
+            const context = cameraCanvas.getContext('2d');
+            cameraCanvas.width = cameraVideo.videoWidth;
+            cameraCanvas.height = cameraVideo.videoHeight;
+            context.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            const imageDataUrl = cameraCanvas.toDataURL('image/png');
+            
+            if (onCaptureCallback) {
+                onCaptureCallback(imageDataUrl);
+            }
+            closeCamera();
+        });
+
+        cameraSwitchBtn.addEventListener('click', () => {
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            openCamera(onCaptureCallback); // Reiniciar la cámara con la nueva configuración
+        });
+
+        cameraCloseBtn.addEventListener('click', closeCamera);
+
+        startCameraBtn.addEventListener('click', () => {
+            openCamera((imageDataUrl) => {
+                photoPreview.src = imageDataUrl;
+                photoPreview.classList.remove('hidden');
+            });
+        });
+
+
+        // =================================================================================
+        // LÓGICA DE VISUALIZACIÓN Y FILTRADO DE PRODUCTOS
+        // =================================================================================
+
+        function listenForProducts() {
+            if (unsubscribeProducts) return;
+            const productsCollectionRef = collection(db, `artifacts/${__app_id}/public/data/products`);
+            const q = query(productsCollectionRef, orderBy("createdAt", "desc"));
+            unsubscribeProducts = onSnapshot(q, (snapshot) => {
+                allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                applyFilters();
+                // Si el modal está abierto, actualiza su contenido
+                const currentState = history.state;
+                if (currentState && currentState.modalOpen) {
+                    const product = allProducts.find(p => p.id === currentState.productId);
+                    if (product) {
+                        modalProductName.textContent = product.name;
+                        modalProductPrice.textContent = `${(product.price || 0).toFixed(2)} Bs.`;
+                        modalProductCategory.textContent = product.category || 'Sin categoría';
+                        modalProductDetails.textContent = product.details || 'No hay detalles adicionales.';
+                        modalProductImage.src = product.image || 'https://via.placeholder.com/300x200/4a5568/ffffff?text=Sin+Imagen';
+                    }
+                }
+            }, (error) => {
+                showMessage("Error al cargar los productos.", true);
+            });
+        }
+
+        function renderProducts(products) {
+            productListDiv.innerHTML = '';
+            if (products.length === 0) {
+                productListDiv.innerHTML = `<p class="col-span-full text-center text-gray-500">No se encontraron productos.</p>`;
+                return;
+            }
+            const isJefe = currentUserRole === 'jefe';
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform cursor-pointer';
+                productCard.dataset.id = product.id;
+
+                const placeholderImg = 'https://via.placeholder.com/300x200/4a5568/ffffff?text=Sin+Imagen';
+                productCard.innerHTML = `
+                    <img class="w-full h-40 object-cover pointer-events-none" src="${product.image || placeholderImg}" alt="${product.name}">
+                    <div class="p-4">
+                        <h3 class="text-lg font-bold truncate">${product.name}</h3>
+                        <p class="text-3xl font-light text-indigo-400">${(product.price || 0).toFixed(2)} Bs.</p>
+                        ${product.category ? `<span class="inline-block bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full mt-1">${product.category}</span>` : ''}
+                        <p class="text-gray-600 dark:text-gray-400 mt-2 text-base truncate h-5">${product.details || ''}</p>
+                        ${isJefe ? `<button data-id="${product.id}" class="delete-product-btn mt-4 w-full bg-red-500 text-white font-bold py-2 rounded-lg hover:bg-red-600 transition-colors">Eliminar</button>` : ''}
+                    </div>
+                `;
+                productListDiv.appendChild(productCard);
+            });
+        }
+        
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedCategory = categoryFilter.value;
+            let filteredProducts = allProducts;
+            if (searchTerm) {
+                filteredProducts = filteredProducts.filter(p => p.name.toLowerCase().includes(searchTerm));
+            }
+            if (selectedCategory && selectedCategory !== 'all') {
+                filteredProducts = filteredProducts.filter(p => p.category === selectedCategory);
+            }
+            renderProducts(filteredProducts);
+        }
+
+        searchInput.addEventListener('input', applyFilters);
+        categoryFilter.addEventListener('change', applyFilters);
+
+        // =================================================================================
+        // DELEGACIÓN DE EVENTOS PARA ELIMINAR Y VER DETALLES
+        // =================================================================================
+
+        productListDiv.addEventListener('click', (e) => {
+            const deleteButton = e.target.closest('.delete-product-btn');
+
+            if (deleteButton && currentUserRole === 'jefe') {
+                e.stopPropagation(); // ¡Esta es la corrección clave!
+                const productId = deleteButton.dataset.id;
+                if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+                    deleteDoc(doc(db, `artifacts/${__app_id}/public/data/products`, productId))
+                        .then(() => {
+                            showMessage('Producto eliminado.');
+                        })
+                        .catch((error) => {
+                            showMessage(`Error al eliminar: ${error.message}`, true);
+                        });
+                }
+            } else {
+                const productCard = e.target.closest('.product-card');
+                if (productCard) {
+                    const productId = productCard.dataset.id;
+                    openProductModal(productId);
+                }
+            }
+        });
+
+        // Iniciar la UI al cargar la página
+        handleStateChange({ state: history.state });
+
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registrado con éxito:', registration.scope);
+          }, err => {
+            console.log('Fallo en el registro de ServiceWorker:', err);
+          });
+        });
+      }
+    </script>
+</body>
+</html>
