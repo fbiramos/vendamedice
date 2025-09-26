@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vendamedice-cache-v1';
+const CACHE_NAME = 'vendamedice-cache-v2';
 const urlsToCache = [
   '/',
   'index.html',
@@ -26,14 +26,30 @@ self.addEventListener('fetch', event => {
     return fetch(event.request);
   }
 
+  // Estrategia: Network First para index.html
+  if (event.request.mode === 'navigate' || event.request.url.endsWith('index.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // Clonar la respuesta porque un stream de respuesta solo puede ser consumido una vez
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        })
+        .catch(() => caches.match(event.request)) // Si la red falla, ir a la caché
+    );
+    return;
+  }
+
+  // Para otros recursos, estrategia: Cache First
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Si el recurso está en la caché, lo devolvemos
         if (response) {
           return response;
         }
-        // Si no, lo pedimos a la red
         return fetch(event.request);
       })
   );
@@ -51,6 +67,10 @@ self.addEventListener('activate', event => {
           }
         })
       );
+    }).then(() => {
+      // Activa el nuevo service worker inmediatamente
+      self.clients.claim();
     })
   );
+  self.skipWaiting();
 });

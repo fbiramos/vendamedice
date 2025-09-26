@@ -38,7 +38,7 @@
             <p class="text-gray-600 dark:text-gray-400 mb-8">Por favor, elige cómo quieres entrar.</p>
             <div class="space-y-4">
                 <button id="enter-as-user-btn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors text-lg">Ver Inventario</button>
-                <button id="enter-as-boss-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors text-lg">Administrar (Jefe)</button>
+                <button id="enter-as-boss-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors text-lg">Administrar</button>
             </div>
         </div>
     </div>
@@ -527,7 +527,7 @@
             if (currentUserRole) {
                 roleSelectorModal.classList.add('opacity-0', 'pointer-events-none');
                 mainContent.classList.remove('hidden');
-                roleDisplay.textContent = `Rol: ${currentUserRole.charAt(0).toUpperCase() + currentUserRole.slice(1)}`;
+                roleDisplay.textContent = `Rol: ${currentUserRole === 'jefe' ? 'Administrar' : currentUserRole.charAt(0).toUpperCase() + currentUserRole.slice(1)}`;
                 bossSection.classList.toggle('hidden', currentUserRole !== 'jefe');
                 listenForProducts();
             } else {
