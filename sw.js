@@ -1,6 +1,6 @@
-const CACHE_NAME = 'vendamedice-cache-v2';
+const CACHE_NAME = 'vendamedice-cache-v11';
 const urlsToCache = [
-  '/',
+  './',
   'index.html',
   'manifest.json',
   'icons/icon-192x192.png',
@@ -11,6 +11,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -72,5 +73,4 @@ self.addEventListener('activate', event => {
       self.clients.claim();
     })
   );
-  self.skipWaiting();
 });

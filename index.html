@@ -37,8 +37,8 @@
             <h2 class="text-3xl font-bold mb-2 text-indigo-500">Bienvenido a VéndameDice</h2>
             <p class="text-gray-600 dark:text-gray-400 mb-8">Por favor, elige cómo quieres entrar.</p>
             <div class="space-y-4">
-                <button id="enter-as-user-btn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors text-lg">Ver Inventario</button>
-                <button id="enter-as-boss-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors text-lg">Administrar</button>
+                <button id="enter-as-user-btn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors text-lg uppercase">Ver inventario</button>
+                <button id="enter-as-boss-btn" class="w-full bg-indigo-500 text-white font-bold py-3 rounded-lg hover:bg-indigo-600 transition-colors text-lg uppercase">Administrar</button>
             </div>
         </div>
     </div>
@@ -165,7 +165,7 @@
         <!-- Encabezado -->
         <header class="flex justify-between items-center mb-6 pb-4 border-b border-gray-300 dark:border-gray-700">
             <div class="flex items-center gap-4">
-                <h1 class="text-4xl font-bold text-indigo-500">VéndameDice</h1>
+                <h1 class="text-4xl font-bold text-teal-500">VéndameDice</h1>
             </div>
             <div>
                 <span id="role-display" class="font-semibold mr-4"></span>
@@ -774,7 +774,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
+          navigator.serviceWorker.register('sw.js').then(registration => {
             console.log('ServiceWorker registrado con éxito:', registration.scope);
           }, err => {
             console.log('Fallo en el registro de ServiceWorker:', err);
